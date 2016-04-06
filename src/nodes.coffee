@@ -63,11 +63,12 @@ exports.Base = class Base
   # the top level of a block (which would be unnecessary), and we haven't
   # already been asked to return the result (because statements know how to
   # return results).
-  compileToFragments: (o, lvl) ->
-    o        = extend {}, o
-    o.level  = lvl if lvl
-    node     = @unfoldSoak(o) or this
-    node.tab = o.indent
+  compileToFragments: (o, lvl, isolated) ->
+    o          = extend {}, o
+    o.level    = lvl if lvl
+    o.isolated = true if isolated
+    node       = @unfoldSoak(o) or this
+    node.tab   = o.indent
     if o.level is LEVEL_TOP or not node.isStatement(o)
       node.compileNode o
     else
@@ -694,8 +695,7 @@ exports.Call = class Call extends Base
       if @isNew then fragments.push @makeCode 'new '
       
       if @isolated
-        o.scope.parent = null
-        code = @variable.compileToFragments(o, LEVEL_TOP)
+        code = @variable.compileToFragments o, LEVEL_TOP, true
         vr = o.scope.root.freeVariable 'isolatedFn'
         o.scope.root.assign vr, fragmentsToText code
         fragments.push @makeCode vr
@@ -1491,6 +1491,7 @@ exports.Code = class Code extends Base
 
     o.scope         = del(o, 'classScope') or @makeScope o.scope
     o.scope.shared  = del(o, 'sharedScope')
+    o.scope.parent  = null if o.isolated
     o.indent        += TAB
     delete o.bare
     delete o.isExistentialEquals
