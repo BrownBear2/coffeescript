@@ -778,7 +778,7 @@ JS_KEYWORDS = [
 
 # CoffeeScript-only keywords.
 COFFEE_KEYWORDS = [
-  'undefined', 'Infinity', 'NaN'
+  'undefined', 'Infinity', 'NaN', 'isolate',
   'then', 'unless', 'until', 'loop', 'of', 'by', 'when'
 ]
 
@@ -915,7 +915,7 @@ COMPOUND_ASSIGN = [
 ]
 
 # Unary tokens.
-UNARY = ['NEW', 'TYPEOF', 'DELETE', 'DO']
+UNARY = ['NEW', 'TYPEOF', 'DELETE', 'DO', 'ISOLATE']
 
 UNARY_MATH = ['!', '~']
 

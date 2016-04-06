@@ -626,7 +626,7 @@ exports.Comment = class Comment extends Base
 
 # Node for a function invocation.
 exports.Call = class Call extends Base
-  constructor: (@variable, @args = [], @soak) ->
+  constructor: (@variable, @args = [], @soak = false, @isolated = false, @func) ->
     @isNew    = false
     if @variable instanceof Value and @variable.isNotCallable()
       @variable.error "literal is not a function"
@@ -692,7 +692,18 @@ exports.Call = class Call extends Base
       fragments.push @makeCode preface
     else
       if @isNew then fragments.push @makeCode 'new '
-      fragments.push @variable.compileToFragments(o, LEVEL_ACCESS)...
+      
+      if @isolated
+        o.scope.parent = null
+        code = @variable.compileToFragments(o, LEVEL_TOP)
+        vr = o.scope.root.freeVariable 'isolatedFn'
+        o.scope.root.assign vr, fragmentsToText code
+        fragments.push @makeCode vr
+        
+      else
+        code = @variable.compileToFragments(o, LEVEL_ACCESS)
+        fragments.push code...
+      
       fragments.push @makeCode "("
     fragments.push compiledArgs...
     fragments.push @makeCode ")"
@@ -1740,8 +1751,8 @@ exports.While = class While extends Base
 exports.Op = class Op extends Base
   constructor: (op, first, second, flip ) ->
     return new In first, second if op is 'in'
-    if op is 'do'
-      return @generateDo first
+    if op in [ 'do', 'isolate' ]
+      return @generateDo first, op == 'isolate'
     if op is 'new'
       return first.newInstance() if first instanceof Call and not first.do and not first.isNew
       first = new Parens first   if first instanceof Code and first.bound or first.do
@@ -1813,7 +1824,7 @@ exports.Op = class Op extends Base
   unfoldSoak: (o) ->
     @operator in ['++', '--', 'delete'] and unfoldSoak o, this, 'first'
 
-  generateDo: (exp) ->
+  generateDo: (exp, isolated) ->
     passedParams = []
     func = if exp instanceof Assign and (ref = exp.value.unwrap()) instanceof Code
       ref
@@ -1825,7 +1836,7 @@ exports.Op = class Op extends Base
         delete param.value
       else
         passedParams.push param
-    call = new Call exp, passedParams
+    call = new Call exp, passedParams, false, isolated, func
     call.do = yes
     call
 
